@@ -1,3 +1,4 @@
+from random import randint
 import pygame
 from pygame.locals import *
 
@@ -35,9 +36,37 @@ class Player(pygame.sprite.Sprite):
             self.rect.x -= speed
             print("LEFT")
 
+
+class cheeze(pygame.sprite.Sprite):
+    def __init__(self, image, x, y):
+        super().__init__()
+        self.image = image
+        self.rect = image.get_rect()
+        self.x = x
+        self.y = y
+        self.t = 0
+
+    def update(self, x, y):
+        self.t += 1/60
+        self.rect.y += 8
+        #self.rect.y = y #REMOVE THIS AND IT WORKS BUT IDK WHY
+
+        if self.rect.y <= 800:
+            self.rect.x = randint(0, 900)
+
+            self.rect.x = x
+        
+        
+
+
 player = Player(pygame.image.load("Data/Basement_Kid.png"), 450, 700)
 group = pygame.sprite.Group()
 group.add(player)
+
+cheez_group = pygame.sprite.Group()
+for cheez in range (20):
+    chez = chez = cheeze(pygame.image.load("Data/cheeze.png"), randint(0, 900), 0)
+    cheez_group.add(chez)
 
 while running:  
     screen.fill((221,221,221))
@@ -45,6 +74,8 @@ while running:
     key_pressed = pygame.key.get_pressed()
     group.update(key_pressed)
     group.draw(screen)#surface
+    cheez_group.draw(screen)
+    cheez_group.update(chez.rect.x, chez.rect.y)
 
 
     for event in pygame.event.get():
