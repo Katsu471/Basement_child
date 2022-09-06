@@ -4,7 +4,8 @@ from pygame.locals import *
 
 pygame.init()
 
-screen = pygame.display.set_mode((900, 800), 0, 32)
+playspace = pygame.Surface((500, 600))
+screen = pygame.display.set_mode((900, 640), 0, 32)
 running = True
 fpsclock = pygame.time.Clock()
 pygame.display.set_caption("Poggers")
@@ -38,44 +39,77 @@ class Player(pygame.sprite.Sprite):
 
 
 class cheeze(pygame.sprite.Sprite):
-    def __init__(self, image, x, y):
+    def __init__(self, image):#, x, y):
         super().__init__()
         self.image = image
         self.rect = image.get_rect()
-        self.x = x
-        self.y = y
+        #self.x = x
+        #self.y = y
         self.t = 0
 
-    def update(self, x, y):
+    def update(self):
         self.t += 1/60
         self.rect.y += 8
-        #self.rect.y = y #REMOVE THIS AND IT WORKS BUT IDK WHY
 
-        if self.rect.y <= 800:
-            self.rect.x = randint(0, 900)
+        if self.rect.y >= 600:
+            self.rect.x = randint(0, playspace.get_width())
+            self.rect.y = -40
+#bgstuff
+class background(pygame.sprite.Sprite):
+    def __init__(self, image):
+        super().__init__()
+        self.image = image
+        self.rect = image.get_rect()
+        self.t = 0
 
-            self.rect.x = x
+    
+    def update(self, no):
+        if no == 1:
+            self.t += 1/60
+            self.rect.y += 2
+
+            if self.rect.y >= 600:
+                self.rect.y = -1
+            
+        if no == 2:
+            self.t += 1/60
+            self.rect.y += 2
+
+            if self.rect.y >= 1:
+                self.rect.y = -600
+
         
-        
+                 
+bg1 = background(pygame.image.load("Data/feild.png"))
+player = Player(pygame.image.load("Data/Basement_Kid.png"), playspace.get_width()/2-35, 500)
 
+bggroup = pygame.sprite.Group()
+bggroup.add(bg1)
+bggroup2 = pygame.sprite.Group()
+bggroup2.add(bg1)
 
-player = Player(pygame.image.load("Data/Basement_Kid.png"), 450, 700)
 group = pygame.sprite.Group()
 group.add(player)
 
 cheez_group = pygame.sprite.Group()
 for cheez in range (20):
-    chez = chez = cheeze(pygame.image.load("Data/cheeze.png"), randint(0, 900), 0)
+    chez = cheeze(pygame.image.load("Data/cheeze.png"))#, randint(0, 900), 0)
     cheez_group.add(chez)
 
-while running:  
-    screen.fill((221,221,221))
+while running:
+    screen.fill((50, 50, 50))
+    screen.blit(playspace, [20, 20])
+    playspace.fill((221,221,221))
 
     key_pressed = pygame.key.get_pressed()
+    bggroup.draw(playspace)
+    bggroup.update(1)
+    bggroup2.update(2)
+    
     group.update(key_pressed)
-    group.draw(screen)#surface
-    cheez_group.draw(screen)
-    cheez_group.update(chez.rect.x, chez.rect.y)
+    group.draw(playspace)#surface
+    cheez_group.draw(playspace)
+    cheez_group.update()
 
 
     for event in pygame.event.get():
