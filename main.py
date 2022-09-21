@@ -10,7 +10,7 @@ screen = pygame.display.set_mode((900, 640), 0, 32)
 playspace = pygame.Surface((500, 600))
 fpsclock = pygame.time.Clock()
 
-ico = pygame.image.load("Data/cheeze.png")
+ico = pygame.image.load("Data/cooki.png")
 pygame.display.set_caption("ITS FALLING CHEEEZ")
 pygame.display.set_icon(ico)
 
@@ -104,65 +104,82 @@ class Player(pygame.sprite.Sprite):
         self.spawn_y = y
         self.rect.x = x
         self.rect.y = y
-        self.rect.center = [x,y]
+        self.hitrect = pygame.rect.Rect(self.rect.x/2 + 12, self.rect.y/2 - 12, 12, 12)
+        #self.rect.center = [x,y]
         self.last_shot = pygame.time.get_ticks()
+        self.bullet_group = pygame.sprite.Group()
+        self.dead = False
+        self.shot_cooldown = 100
 
-    def update(self):
+    def reset(self):
+        self.dead = False
+        self.rect.x = self.spawn_x
+        self.rect.y = self.spawn_y
+        self.bullet_group.empty()
 
-        key = pygame.key.get_pressed()
-        shot_cooldown = 100 #ms
+    def check_collision(self, enemy_group):
+        for b in self.bullet_group.sprites():
+            if b.offscreen:
+                self.bullet_group.remove(b)
 
+            else:
+                for s in enemy_group.sprites():
+                    if b.rect.colliderect(s.rect):
+                        print(s, "died")
+                        enemy_group.remove(s)
+                        self.bullet_group.remove(b)
+                        enemyshotsound.play()
+
+        if pygame.sprite.spritecollideany(self, enemy_group):
+            print("PLAYER COLLIDE W/ENEMY")
+            self.dead = True
+
+    def update(self, enemy_group, keys_pressed):
         cur_time = pygame.time.get_ticks()
 
-           #check for shoot
-        if key[pygame.K_z] and cur_time - self.last_shot > shot_cooldown:
+        #check for shoot
+        if keys_pressed[pygame.K_z] and cur_time - self.last_shot > self.shot_cooldown:
             pewpewsound.play()
-            bullet = Player_Bullet(self.rect.centerx, self.rect.top)
-            bulletgroup.add(bullet)
+            self.bullet_group.add(Bullet(self.rect.centerx, self.rect.top))
+            #self.bullet_group.add(Bullet(self.rect.centerx + 15, self.rect.top +10))
+            #self.bullet_group.add(Bullet(self.rect.centerx - 15, self.rect.top +10))
+            #self.bullet_group.add(Bullet(self.rect.centerx + 30, self.rect.top +15))
+            #self.bullet_group.add(Bullet(self.rect.centerx - 30, self.rect.top +15))
             self.last_shot = cur_time
             print("shooting")
 
         speed = 5
-        if key[pygame.K_LSHIFT]:
+        if keys_pressed[pygame.K_LSHIFT]:
             speed -= 2.5
-        if key[pygame.K_UP] and self.rect.top > 0:
+        if keys_pressed[pygame.K_UP] and self.rect.top > 0:
             self.rect.y -= speed
             print("UP")
-        if key[pygame.K_DOWN] and self.rect.bottom < 600:
+        if keys_pressed[pygame.K_DOWN] and self.rect.bottom < 600:
             self.rect.y += speed
             print("DOWN")
-        if key[pygame.K_RIGHT] and self.rect.right < 500:
+        if keys_pressed[pygame.K_RIGHT] and self.rect.right < 500:
             self.rect.x += speed
             print("RIGHT")
-        if key[pygame.K_LEFT] and self.rect. left > 0:
+        if keys_pressed[pygame.K_LEFT] and self.rect. left > 0:
             self.rect.x -= speed
             print("LEFT")
 
-        if self.rect.colliderect(cheez1.rect) or self.rect.colliderect(coffee1.rect) or self.rect.colliderect(coffee2.rect) : #OBJECT DEPENDANT(THE RECTS SHOULD ME THE ENEMIES) also not the best implementation.. rework later
-            if cheez1.alive() == True or coffee1.alive() == True or coffee2.alive() == True :
-                print("PLAYER COLLIDE W/ENEMY")
-                #get a EXPLOSION >:o
-                self.rect.x = self.spawn_x
-                self.rect.y = self.spawn_y
-                lost()
+        self.check_collision(enemy_group)
 
-
-class Player_Bullet(pygame.sprite.Sprite):
+class Bullet(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super().__init__()
         self.image = pygame.image.load("Data/player_bullet1.png")
         self.rect = self.image.get_rect()
         self.rect.center = [x, y]
+        self.offscreen = False
 
     def update(self):
         self.rect.y -= 8 #speed of bullets movement
-        if self.rect.colliderect(cheez1.rect) or self.rect.colliderect(cheez2.rect) or self.rect.colliderect(cheez3.rect)or self.rect.colliderect(cheez4.rect) or self.rect.colliderect(cheez5.rect)or self.rect.colliderect(coffee1.rect) or self.rect.colliderect(coffee2.rect) or self.rect.colliderect(coffee3.rect) : #OBJECT DEPENDANT(THE RECTS SHOULD ME THE ENEMIES) also not the best implementation.. rework later
-            if cheez1.alive() == True or coffee1.alive() == True or coffee2.alive() == True :
-                print("BULLET COLLIDE")
-                self.kill()
-                enemyshotsound.play()
+        if self.rect.y < -100:
+            self.offscreen = True
 
-class cheeze(pygame.sprite.Sprite):
+class Cookie(pygame.sprite.Sprite):
     def __init__(self, image, speed):##, x, y):
         super().__init__()
         self.image = pygame.image.load(image)
@@ -179,12 +196,8 @@ class cheeze(pygame.sprite.Sprite):
         if self.rect.y >= 610:
             self.rect.x = randint(-50, playspace.get_width())#
             self.rect.y = -40
-        
-        if self.rect.colliderect(player.rect): #OBJECT DEPENDANT (ARGUMENT SHLOULD BE THE INSTANCE NAME FOLLOWED BY ATTRIBUTE)
-            print("COLLIDED")
-            #self.kill()
 
-class cookie(pygame.sprite.Sprite):
+class Donut(pygame.sprite.Sprite):
     def __init__(self, image, speed):#, x, y):
         super().__init__()
         self.image = pygame.image.load(image)
@@ -199,11 +212,10 @@ class cookie(pygame.sprite.Sprite):
         self.rect.y += self.speed
 
         if self.rect.y >= 610:
-            #self.kill()
-            self.rect.x = randint(-50, playspace.get_width())#
+            self.rect.x = randint(-50, playspace.get_width())
             self.rect.y = -40
 
-class coffee(pygame.sprite.Sprite):
+class Coffee(pygame.sprite.Sprite):
     def __init__(self, image, speed, x, y, mode): #MODE 1: Left to Right, Mode 2: Right to left
         super().__init__()
         self.image = pygame.image.load(image)
@@ -214,33 +226,32 @@ class coffee(pygame.sprite.Sprite):
         self.rect.y = y
         self.t = 0
         self.speed = speed
-        self.mode = mode  
+        self.mode = mode
+        if self.mode == 1:
+            self.image = pygame.transform.flip(self.image, True, False)
 
     def update(self):
         self.t += 1/60
         if self.mode == 1:
-            self.rect.y += self.speed
-            self.rect.x += self.speed
+            self.rect.y += randint(1, 3)#self.speed
+            self.rect.x += randint(1, 2)#self.speed
+
         if self.mode == 2:
-            self.rect.y += randint(1, 4)#self.speed
-            self.rect.x -= randint(1, 13)#self.speed
+            self.rect.y += randint(1, 3)#self.speed
+            self.rect.x -= randint(1, 2)#self.speed
 
         if self.rect.y >= 610 and self.mode == 1:
             self.rect.x = randint(-70,-50)
-            self.rect.y = randint(-5, 260)
+            self.rect.y = randint(-100, 100)
 
         if self.rect.y >= 610 and self.mode == 2:
             self.rect.x = randint(600, 620)
-            self.rect.y = randint(-5, 260)
-
-        if self.rect.colliderect(player.rect): #OBJECT DEPENDANT (ARGUMENT SHLOULD BE THE INSTANCE NAME FOLLOWED BY ATTRIBUTE)
-            print("COLLIDED COFFEE ")
-            self.kill()
+            self.rect.y = randint(-100, 100)
                 
 #VARIABLES AND INSTANCES FOR playing() START
 
 #sounds and muse
-pewpewsound = pygame.mixer.Sound("Data/mal_shoot.wav")
+pewpewsound = pygame.mixer.Sound("Data/mal_shoot2.wav")
 enemyshotsound = pygame.mixer.Sound("Data/shot.wav")
 enemyshotsound.set_volume(0.1)
 pewpewsound.set_volume(0.008)
@@ -258,33 +269,26 @@ txtlife = font("Data/l_10646.ttf", 20, "Life", (192, 192, 192))
 arcade_mode = font("Data/l_10646.ttf", 25, "Arcade Mode", (192, 192, 192))
 
 player = Player("Data/New_Kid.png", playspace.get_width()/2, 500, 3)
-playergroup = pygame.sprite.Group()
-playergroup.add(player)
-
-bulletgroup = pygame.sprite.Group()
+player_group = pygame.sprite.GroupSingle()
+player_group.add(player)
 
 #ENEMY
-cheez_group = pygame.sprite.Group()
-cheez1 = cheeze("Data/cheeze.png", randint(2, 7))
-cheez2 = cheeze("Data/cheeze.png", randint(2, 7))
-cheez3 = cheeze("Data/cheeze.png", randint(2, 7))
-cheez4 = cheeze("Data/cheeze.png", randint(2, 7))
-cheez5 = cheeze("Data/cheeze.png", randint(2, 7))
-cheez_group.add(cheez1,cheez2,cheez3,cheez4,cheez5)
 
-coffee_group = pygame.sprite.Group()
-coffee1 = coffee("Data/Coffee.png", 2, randint(600, 620), randint(-5, 260), 2)
-coffee2 = coffee("Data/Coffee.png", 5, randint(-70,-50), 10, 1)
-coffee3 = coffee("Data/Coffee.png", 3, randint(-100,-50), randint(-5, 200), 2)
-coffee_group.add(coffee1,coffee2,coffee3)
+enemy_group = pygame.sprite.Group()
 
 #VARIABLES AND INSTANCES FOR playing() END!
 #................................................
 #VARIABLES AND INSTANCES FOR mainmenu() START
 title_screen_and_bg = pygame.image.load("Data/MENU BG1.png") #these two are just images of 900 x 600 they are not 900x640, make the text and stars different layers later, and maybe a lil animation too (x_x)
 alt_title_screen_and_bg = pygame.image.load("Data/MENU BG2.png")
+
 START_BUTTON = Button("Data/buttonimage.png", (260, 377), "Start", pygame.font.Font("Data/l_10646.ttf", 35), (234, 146, 171), (175, 127, 194))#estimated pos
-QUIT_BUTTON = Button("Data/buttonimage.png", (300, 450), "Quit", pygame.font.Font("Data/l_10646.ttf", 35), (234, 146, 171), (175, 127, 194))#estimated pos
+QUIT_BUTTON1 = Button("Data/buttonimage.png", (300, 450), "Quit", pygame.font.Font("Data/l_10646.ttf", 35), (234, 146, 171), (175, 127, 194))#estimated pos
+ 
+RESTART_BUTTON = Button("Data/buttonimage.png", (450, 377), "Restart", pygame.font.Font("Data/l_10646.ttf", 35), (234, 146, 171), (175, 127, 194))#estimated pos
+QUIT_BUTTON2 = Button("Data/buttonimage.png", (450, 477), "Quit", pygame.font.Font("Data/l_10646.ttf", 35), (234, 146, 171), (175, 127, 194))#estimated pos
+        
+
 #VARIABLES AND INSTANCES FOR mainmenu() END
 #................................................
 #VARIABLES AND INSTANCES FOR lost() START
@@ -292,146 +296,118 @@ ded = font("Data/l_10646.ttf", 50, "You lost", (255,255,255))
 ded_bg = pygame.image.load("Data/youlost.png")
 #VARIABLES AND INSTANCES FOR lost() END
 
-def playing():
-    while True:
-        screen.fill((50, 50, 50))
-        screen.blit(playspace, [20, 20])
-        playspace.fill((74,66,84)) #use 221 if check
-        #score
-        txtscore.render_text(screen, 550, 100)
-        txttempnumbers.render_text(screen, 610, 104)#add another text object to be the numbers and add a func to update th numbers to the class
-        txtlife.render_text(screen, 550, 200)
-        arcade_mode.render_text(screen, 640, 20)
+def reset():
+    player_group.sprite.reset()
 
-        #background layers
-        pink_star_layer.update()
-        lighter_purple_star_layer.update()
-        indigo_star_layer.update()
-        #
-        pink_star_layer.render(playspace)
-        lighter_purple_star_layer.render(playspace)
-        indigo_star_layer.render(playspace)
+    enemy_group.empty()
+    for _ in range(32):
+        enemy_group.add(Cookie("Data/cooki.png", randint(1, 5)))
 
-        #player
-        playergroup.update()
-        playergroup.draw(playspace)#surface
-
-        #enemies
-        cheez_group.draw(playspace)
-        cheez_group.update()
-
-        coffee_group.draw(playspace)
-        coffee_group.update()    
-
-        #player bullets
-        bulletgroup.draw(playspace)
-        bulletgroup.update()
+    for _ in range(10):
+        enemy_group.add(Coffee("Data/Coffee.png", 2, randint(600, 990), randint(-100, 100), 2))
+        enemy_group.add(Coffee("Data/Coffee.png", 1, randint(-390,-50), randint(-100, 100) , 1))
 
 
+def playing(mouse_pos, keys_pressed):
+    if player.dead: 
+        return lost
 
-        for event in pygame.event.get():
-            key = pygame.key.get_pressed()
-            if key[pygame.K_ESCAPE]:
-                mainmenu()
+    screen.fill((50, 50, 50))
+    screen.blit(playspace, [20, 20])
+    playspace.fill((74,66,84)) #use 221 if check
+    #score
+    txtscore.render_text(screen, 550, 100)
+    txttempnumbers.render_text(screen, 610, 104)#add another text object to be the numbers and add a func to update th numbers to the class
+    txtlife.render_text(screen, 550, 200)
+    arcade_mode.render_text(screen, 640, 20)
 
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+    #background layers
+    pink_star_layer.update()
+    lighter_purple_star_layer.update()
+    indigo_star_layer.update()
+    #
+    pink_star_layer.render(playspace)
+    lighter_purple_star_layer.render(playspace)
+    indigo_star_layer.render(playspace)
 
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                xpos = event.pos[0]
-                ypos = event.pos[1]
-                if event.button == 1:
-                    print(f"X = {xpos}\nY = {ypos}\n...\n")
+    #enemies
+    enemy_group.update()
+    enemy_group.draw(playspace)
 
-        pygame.display.update()
-        fpsclock.tick(60)
+    #player
+    player_group.update(enemy_group, keys_pressed)
+    player_group.draw(playspace)#surface
 
-def mainmenu():
-    while True:
-        screen.fill((0, 0, 36)) #colour of the background image backgrounds
-        screen.blit(alt_title_screen_and_bg,(0,0))
+    player_group.sprite.bullet_group.update()
+    player_group.sprite.bullet_group.draw(playspace)
 
-        MENU_MOUSE_POS = pygame.mouse.get_pos()
+    if keys_pressed[pygame.K_ESCAPE]:
+        return mainmenu
 
-        #insert BUTTONS here 
-        for button in [START_BUTTON, QUIT_BUTTON]:
-            button.changeColor(MENU_MOUSE_POS)
-            button.update(screen)
-        #    
-        
-        for event in pygame.event.get():
-            key = pygame.key.get_pressed()
-            if key[pygame.K_p]:
-                playing()
+    return playing
 
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+def mainmenu(mouse_pos, keys_pressed):
+    screen.fill((0, 0, 36)) #colour of the background image backgrounds
+    screen.blit(alt_title_screen_and_bg,(0,0))
 
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                xpos = event.pos[0]
-                ypos = event.pos[1]
-                if event.button == 1:
-                    print(f"X = {xpos}\nY = {ypos}\n...\n")
-            #
-                if START_BUTTON.checkForInput(MENU_MOUSE_POS):
-                    playing()
-                if QUIT_BUTTON.checkForInput(MENU_MOUSE_POS):
-                    pygame.quit()
-                    sys.exit()
-            #
+    #insert BUTTONS here 
+    for button in [START_BUTTON, QUIT_BUTTON1]:
+        button.changeColor(mouse_pos)
+        button.update(screen) 
 
+    if keys_pressed[pygame.K_p]:
+        reset()
+        return playing
 
-        pygame.display.update()
-        fpsclock.tick(60)
+    if pygame.mouse.get_pressed(3)[0]:
+        if START_BUTTON.checkForInput(mouse_pos):
+            reset()
+            return playing
 
-def lost(): #currently behaves exactly like a PAUSE need to figure out how to reset playing() when this "function" is called
-    while True:
-        screen.fill((0, 0, 36)) #colour of the background image backgrounds
-        screen.blit(ded_bg, (0,10)) #<-- finish this
-        ded.render_text(ded_bg, ded_bg.get_width()/2 - 100, 30)
+        if QUIT_BUTTON1.checkForInput(mouse_pos):
+            pygame.quit()
+            sys.exit()
 
-        LOST_MOUSE_POS = pygame.mouse.get_pos()
+    return mainmenu
 
-        #insert BUTTONS here  
-        RESTART_BUTTON = Button("Data/buttonimage.png", (450, 377), "Restart", pygame.font.Font("Data/l_10646.ttf", 35), (234, 146, 171), (175, 127, 194))#estimated pos
-        QUIT_BUTTON = Button("Data/buttonimage.png", (450, 477), "Quit", pygame.font.Font("Data/l_10646.ttf", 35), (234, 146, 171), (175, 127, 194))#estimated pos
-         
-        #
-        for button in [RESTART_BUTTON, QUIT_BUTTON]:
-            button.changeColor(LOST_MOUSE_POS)
-            button.update(screen)
-        #    
-        
-        for event in pygame.event.get():
-            key = pygame.key.get_pressed()
-            if key[pygame.K_p]:
-                playing()
+def lost(mouse_pos, keys_pressed): #currently behaves exactly like a PAUSE need to figure out how to reset playing() when this "function" is called
+    screen.fill((0, 0, 36)) #colour of the background image backgrounds
+    screen.blit(ded_bg, (0,10)) #<-- finish this
+    ded.render_text(ded_bg, ded_bg.get_width()/2 - 100, 30)
 
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
+    for button in [RESTART_BUTTON, QUIT_BUTTON2]:
+        button.changeColor(mouse_pos)
+        button.update(screen)
+    
+    if keys_pressed[pygame.K_p]:
+        return playing
 
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                xpos = event.pos[0]
-                ypos = event.pos[1]
-                if event.button == 1:
-                    print(f"X = {xpos}\nY = {ypos}\n...\n")
-            #
-                if RESTART_BUTTON.checkForInput(LOST_MOUSE_POS):
-                    playing()
-                if QUIT_BUTTON.checkForInput(LOST_MOUSE_POS):
-                    pygame.quit()
-                    sys.exit()
-            #
+    if pygame.mouse.get_pressed(3)[0]:
+        if RESTART_BUTTON.checkForInput(mouse_pos):
+            reset()
+            return playing
+
+        if QUIT_BUTTON2.checkForInput(mouse_pos):
+            pygame.quit()
+            sys.exit()
+
+    return lost
 
 
-        pygame.display.update()
-        fpsclock.tick(60)
+display = mainmenu
+while True:
+    mouse_pos = pygame.mouse.get_pos()
+    keys_pressed = pygame.key.get_pressed()
 
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
 
-mainmenu()
+    display = display(mouse_pos, keys_pressed)
+
+    pygame.display.update()
+    fpsclock.tick(60)
 
 #TMR MAKE THE LOST RESET and also reset loc of enemies when shot could be used
 #MAKE BULLET SLOW ENEMY
